@@ -1,6 +1,6 @@
 {
   "hosting": {
-    "site": "calendario-visite-deconto",
+    "site": "calendario-visite-commerciali",
     "public": ".",
     "ignore": [
       "firebase.json",

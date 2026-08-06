@@ -18,12 +18,97 @@ const MONTHS_IT = [
   'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'
 ];
 
+// --- CONFIGURAZIONE FIREBASE ---
+const firebaseConfig = {
+  projectId: "deconto-vending-app",
+  appId: "1:959340769418:web:8b6f05f5430d1a1d1f3d73",
+  storageBucket: "deconto-vending-app.firebasestorage.app",
+  apiKey: "AIzaSyCrhuHoKmfvuHxr9ZE46fI1oTL44OcYVkM",
+  authDomain: "deconto-vending-app.firebaseapp.com",
+  messagingSenderId: "959340769418"
+};
+
+let db = null;
+let useFirestore = false;
+
 // --- INIZIALIZZAZIONE ---
 document.addEventListener('DOMContentLoaded', () => {
-  loadFromLocalStorage();
+  initFirebase();
   initUI();
-  render();
+  if (!useFirestore) {
+    loadFromLocalStorage();
+    render();
+  }
 });
+
+function initFirebase() {
+  try {
+    if (typeof firebase !== 'undefined') {
+      firebase.initializeApp(firebaseConfig);
+      db = firebase.firestore();
+      useFirestore = true;
+      initFirestoreSync();
+    } else {
+      console.warn("Librerie Firebase non caricate. Fallback locale.");
+      useFirestore = false;
+    }
+  } catch (e) {
+    console.warn("Errore durante l'inizializzazione di Firebase. Fallback locale.", e);
+    useFirestore = false;
+  }
+}
+
+function initFirestoreSync() {
+  if (!useFirestore || !db) return;
+  
+  // Abilita persistenza offline nativa di Firestore
+  db.enablePersistence().catch((err) => {
+    console.warn("Firestore offline persistence disabilitata:", err.code);
+  });
+  
+  let clientsSynced = false;
+  let eventsSynced = false;
+  let overridesSynced = false;
+
+  const handleSyncError = (err) => {
+    console.warn("Firestore non attivo o regole mancanti. Fallback automatico su localStorage.", err);
+    if (!clientsSynced || !eventsSynced || !overridesSynced) {
+      useFirestore = false; // Disabilita per evitare tentativi di scrittura falliti
+      loadFromLocalStorage();
+      render();
+    }
+  };
+
+  db.collection('calendario_clients').onSnapshot(snapshot => {
+    state.clients = [];
+    snapshot.forEach(doc => {
+      state.clients.push({ id: doc.id, ...doc.data() });
+    });
+    clientsSynced = true;
+    saveToLocalStorage();
+    render();
+  }, handleSyncError);
+
+  db.collection('calendario_events').onSnapshot(snapshot => {
+    state.events = [];
+    snapshot.forEach(doc => {
+      state.events.push({ id: doc.id, ...doc.data() });
+    });
+    eventsSynced = true;
+    saveToLocalStorage();
+    render();
+  }, handleSyncError);
+
+  db.collection('calendario_overrides').onSnapshot(snapshot => {
+    state.overrides = {};
+    snapshot.forEach(doc => {
+      state.overrides[doc.id] = doc.data();
+    });
+    overridesSynced = true;
+    saveToLocalStorage();
+    render();
+  }, handleSyncError);
+}
 
 // Caricamento dati
 function loadFromLocalStorage() {
@@ -803,16 +888,27 @@ function handleLogOutcomeSubmit(e) {
   
   const overrideKey = `${eventId}_${dateStr}`;
   
-  // Se è "pianificata" e non ci sono note, rimuoviamo l'override per pulire la memoria locale
-  if (status === 'pianificata' && !notes) {
-    delete state.overrides[overrideKey];
+  if (useFirestore && db) {
+    if (status === 'pianificata' && !notes) {
+      db.collection('calendario_overrides').doc(overrideKey).delete()
+        .then(() => closeAllModals())
+        .catch(err => console.error("Errore salvataggio esito su Firestore:", err));
+    } else {
+      db.collection('calendario_overrides').doc(overrideKey).set({ eventId, date: dateStr, status, notes })
+        .then(() => closeAllModals())
+        .catch(err => console.error("Errore salvataggio esito su Firestore:", err));
+    }
   } else {
-    state.overrides[overrideKey] = { status, notes };
+    // Se è "pianificata" e non ci sono note, rimuoviamo l'override per pulire la memoria locale
+    if (status === 'pianificata' && !notes) {
+      delete state.overrides[overrideKey];
+    } else {
+      state.overrides[overrideKey] = { status, notes };
+    }
+    saveToLocalStorage();
+    closeAllModals();
+    render();
   }
-  
-  saveToLocalStorage();
-  closeAllModals();
-  render();
 }
 
 // MODALE CREAZIONE / MODIFICA PROGRAMMAZIONE REALE (SERIE BASE)
@@ -930,56 +1026,71 @@ function handleProgramSubmit(e) {
     }
   }
   
-  if (editId) {
-    // MODIFICA SERIE ESISTENTE
-    const idx = state.events.findIndex(evt => evt.id === editId);
-    if (idx !== -1) {
-      state.events[idx] = {
-        ...state.events[idx],
-        clientId,
-        startDate,
-        endDate,
-        startTime,
-        endTime,
-        recurrence
-      };
-    }
+  const eventId = editId || `evt_${Date.now()}`;
+  const eventData = {
+    clientId,
+    startDate,
+    endDate,
+    startTime,
+    endTime,
+    recurrence
+  };
+
+  if (useFirestore && db) {
+    db.collection('calendario_events').doc(eventId).set(eventData)
+      .then(() => closeAllModals())
+      .catch(err => console.error("Errore salvataggio programmazione su Firestore:", err));
   } else {
-    // CREA NUOVA SERIE
-    const newEvent = {
-      id: `evt_${Date.now()}`,
-      clientId,
-      startDate,
-      endDate,
-      startTime,
-      endTime,
-      recurrence
-    };
-    state.events.push(newEvent);
+    if (editId) {
+      // MODIFICA SERIE ESISTENTE
+      const idx = state.events.findIndex(evt => evt.id === editId);
+      if (idx !== -1) {
+        state.events[idx] = { id: editId, ...eventData };
+      }
+    } else {
+      // CREA NUOVA SERIE
+      state.events.push({ id: eventId, ...eventData });
+    }
+    saveToLocalStorage();
+    closeAllModals();
+    render();
   }
-  
-  saveToLocalStorage();
-  closeAllModals();
-  render();
 }
 
-function handleDeleteEvent() {
+async function handleDeleteEvent() {
   const editId = document.getElementById('edit-event-id').value;
   if (!editId) return;
   
   if (confirm("Sei sicuro di voler eliminare questa programmazione? Verranno rimossi tutti i passaggi futuri. Gli storici passati potrebbero essere orfani.")) {
-    state.events = state.events.filter(evt => evt.id !== editId);
-    
-    // Facciamo pulizia degli override relativi a questo evento
-    for (const key of Object.keys(state.overrides)) {
-      if (key.startsWith(editId + '_')) {
-        delete state.overrides[key];
+    if (useFirestore && db) {
+      try {
+        const batch = db.batch();
+        batch.delete(db.collection('calendario_events').doc(editId));
+        
+        // Rimuovi gli override correlati
+        for (const key of Object.keys(state.overrides)) {
+          if (key.startsWith(editId + '_')) {
+            batch.delete(db.collection('calendario_overrides').doc(key));
+          }
+        }
+        await batch.commit();
+        closeAllModals();
+      } catch (err) {
+        console.error("Errore durante l'eliminazione da Firestore:", err);
       }
+    } else {
+      state.events = state.events.filter(evt => evt.id !== editId);
+      
+      // Facciamo pulizia degli override relativi a questo evento
+      for (const key of Object.keys(state.overrides)) {
+        if (key.startsWith(editId + '_')) {
+          delete state.overrides[key];
+        }
+      }
+      saveToLocalStorage();
+      closeAllModals();
+      render();
     }
-    
-    saveToLocalStorage();
-    closeAllModals();
-    render();
   }
 }
 
@@ -1067,24 +1178,27 @@ function handleClientSubmit(e) {
   
   if (!clientName) return;
   
-  if (editId) {
-    // AGGIORNA NOME CLIENTE
-    const idx = state.clients.findIndex(c => c.id === editId);
-    if (idx !== -1) {
-      state.clients[idx].name = clientName;
-    }
-  } else {
-    // CREA NUOVO CLIENTE
-    const newClient = {
-      id: `cli_${Date.now()}`,
-      name: clientName
-    };
-    state.clients.push(newClient);
-  }
+  const clientId = editId || `cli_${Date.now()}`;
   
-  saveToLocalStorage();
-  resetClientForm();
-  render();
+  if (useFirestore && db) {
+    db.collection('calendario_clients').doc(clientId).set({ name: clientName })
+      .then(() => resetClientForm())
+      .catch(err => console.error("Errore salvataggio cliente su Firestore:", err));
+  } else {
+    if (editId) {
+      // AGGIORNA NOME CLIENTE
+      const idx = state.clients.findIndex(c => c.id === editId);
+      if (idx !== -1) {
+        state.clients[idx].name = clientName;
+      }
+    } else {
+      // CREA NUOVO CLIENTE
+      state.clients.push({ id: clientId, name: clientName });
+    }
+    saveToLocalStorage();
+    resetClientForm();
+    render();
+  }
 }
 
 function editClient(client) {
@@ -1105,28 +1219,47 @@ function resetClientForm() {
   document.getElementById('cancel-client-edit-btn').classList.add('hidden');
 }
 
-function deleteClient(clientId) {
+async function deleteClient(clientId) {
   const client = state.clients.find(c => c.id === clientId);
   if (!client) return;
   
   if (confirm(`Sei sicuro di voler eliminare il cliente "${client.name}"? Verranno rimosse TUTTE le sue visite programmate sia future che lo storico degli eventi.`)) {
-    // Filtra clienti
-    state.clients = state.clients.filter(c => c.id !== clientId);
-    
-    // Trova eventi da rimuovere
-    const eventsToDelete = state.events.filter(e => e.clientId === clientId).map(e => e.id);
-    state.events = state.events.filter(e => e.clientId !== clientId);
-    
-    // Rimuovi gli override correlati
-    for (const key of Object.keys(state.overrides)) {
-      const [eventId] = key.split('_');
-      if (eventsToDelete.includes(eventId)) {
-        delete state.overrides[key];
+    if (useFirestore && db) {
+      try {
+        const batch = db.batch();
+        batch.delete(db.collection('calendario_clients').doc(clientId));
+        
+        const eventsToDelete = state.events.filter(e => e.clientId === clientId);
+        eventsToDelete.forEach(evt => {
+          batch.delete(db.collection('calendario_events').doc(evt.id));
+          for (const key of Object.keys(state.overrides)) {
+            if (key.startsWith(evt.id + '_')) {
+              batch.delete(db.collection('calendario_overrides').doc(key));
+            }
+          }
+        });
+        await batch.commit();
+      } catch (err) {
+        console.error("Errore durante l'eliminazione del cliente su Firestore:", err);
       }
+    } else {
+      // Filtra clienti
+      state.clients = state.clients.filter(c => c.id !== clientId);
+      
+      // Trova eventi da rimuovere
+      const eventsToDelete = state.events.filter(e => e.clientId === clientId).map(e => e.id);
+      state.events = state.events.filter(e => e.clientId !== clientId);
+      
+      // Rimuovi gli override correlati
+      for (const key of Object.keys(state.overrides)) {
+        const [eventId] = key.split('_');
+        if (eventsToDelete.includes(eventId)) {
+          delete state.overrides[key];
+        }
+      }
+      saveToLocalStorage();
+      render();
     }
-    
-    saveToLocalStorage();
-    render();
   }
 }
 
