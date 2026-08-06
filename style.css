@@ -92,15 +92,17 @@ button, input, select, textarea {
 }
 
 .sidebar-brand {
+  padding: 24px;
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 32px;
-  padding-left: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.sidebar-brand .brand-icon {
-  font-size: 24px;
+.brand-logo {
+  height: 40px;
+  width: auto;
+  object-fit: contain;
 }
 
 .sidebar-brand h2 {
@@ -1316,9 +1318,11 @@ button, input, select, textarea {
   text-align: center;
 }
 
-.login-icon {
-  font-size: 48px;
+.login-logo {
+  height: 80px;
+  width: auto;
   margin-bottom: 20px;
+  object-fit: contain;
 }
 
 .login-card h2 {

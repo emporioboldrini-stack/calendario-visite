@@ -1544,7 +1544,7 @@ function printReport(title, htmlContent) {
       <div class="header-container">
         <h1>${title}</h1>
         <div class="subtitle">
-          <div>Report VisitPlanner</div>
+          <div>Report Boldrini caffè</div>
           <div>Stampato il ${new Date().toLocaleDateString('it-IT')} ore ${new Date().toLocaleTimeString('it-IT', {hour: '2-digit', minute:'2-digit'})}</div>
         </div>
       </div>
