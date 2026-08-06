@@ -76,6 +76,7 @@ function applyUserRole(role) {
   currentUser = role;
   sessionStorage.setItem('visitplanner_user', role);
   document.getElementById('login-overlay').classList.add('hidden-login');
+  document.getElementById('main-app').classList.remove('hidden');
   document.getElementById('current-user-badge').textContent = role === 'admin' ? 'Admin' : 'Stefano';
   
   if (role === 'visitor') {
