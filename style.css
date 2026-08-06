@@ -1284,3 +1284,84 @@ button, input, select, textarea {
     text-align: center;
   }
 }
+
+/* --- LOGIN OVERLAY --- */
+.login-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: var(--bg-body);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.login-overlay.hidden-login {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.login-card {
+  background: #ffffff;
+  width: 100%;
+  max-width: 400px;
+  padding: 40px;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  text-align: center;
+}
+
+.login-icon {
+  font-size: 48px;
+  margin-bottom: 20px;
+}
+
+.login-card h2 {
+  font-size: 24px;
+  color: var(--text-main);
+  margin-bottom: 10px;
+}
+
+.login-card p {
+  color: var(--text-muted);
+  margin-bottom: 30px;
+  font-size: 14px;
+}
+
+.login-error {
+  color: var(--danger);
+  font-size: 13px;
+  margin-top: 15px;
+  background-color: rgba(239, 68, 68, 0.1);
+  padding: 8px;
+  border-radius: var(--radius-sm);
+}
+
+.sidebar-user {
+  margin-top: auto;
+  margin-bottom: 15px;
+  padding: 0 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.user-badge {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--primary);
+  background-color: rgba(99, 102, 241, 0.1);
+  padding: 4px 10px;
+  border-radius: 20px;
+  text-transform: capitalize;
+}
+
+/* --- ROLE-BASED CSS UTILITY --- */
+/* Elements with this class will be explicitly hidden for non-admins */
+body.visitor-role .admin-only {
+  display: none !important;
+}

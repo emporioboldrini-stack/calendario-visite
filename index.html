@@ -11,6 +11,25 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <!-- LOGIN OVERLAY -->
+  <div id="login-overlay" class="login-overlay">
+    <div class="login-card">
+      <div class="login-icon">💼</div>
+      <h2>Accesso VisitPlanner</h2>
+      <p>Inserisci le credenziali per continuare.</p>
+      <form id="login-form">
+        <div class="form-group">
+          <input type="text" id="login-username" placeholder="Nome Utente" required autocomplete="username">
+        </div>
+        <div class="form-group">
+          <input type="password" id="login-password" placeholder="Password" required autocomplete="current-password">
+        </div>
+        <button type="submit" class="btn btn-primary btn-block">Accedi</button>
+        <div id="login-error" class="login-error hidden">Credenziali non valide. Riprova.</div>
+      </form>
+    </div>
+  </div>
+
   <div class="app-container">
     <!-- Sidebar -->
     <aside class="sidebar">
@@ -22,11 +41,15 @@
         <button id="nav-calendar-btn" class="nav-btn active">
           <span class="nav-icon">📅</span> Calendario
         </button>
-        <button id="nav-clients-btn" class="nav-btn">
+        <button id="nav-clients-btn" class="nav-btn admin-only">
           <span class="nav-icon">👥</span> Gestione Clienti
         </button>
       </nav>
-      <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <span id="current-user-badge" class="user-badge"></span>
+        <button id="logout-btn" class="btn btn-icon btn-sm" title="Esci">🚪</button>
+      </div>
+      <div class="sidebar-footer admin-only">
         <div class="backup-section">
           <h3>Backup Dati</h3>
           <div class="backup-buttons">
@@ -83,7 +106,7 @@
           <div class="day-details-panel">
             <div class="panel-header">
               <h3 id="selected-day-label">Giovedì, 6 Agosto 2026</h3>
-              <button id="add-visit-btn" class="btn btn-primary btn-sm">
+              <button id="add-visit-btn" class="btn btn-primary btn-sm admin-only">
                 <span>+</span> Nuova Visita
               </button>
             </div>

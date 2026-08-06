@@ -9,6 +9,7 @@ let state = {
 let currentDate = new Date(); // Mese o settimana correntemente visualizzata
 let selectedDate = new Date(); // Giorno selezionato per i dettagli
 let currentView = 'month'; // 'month' o 'week'
+let currentUser = null; // 'admin' o 'visitor'
 
 // Costanti
 const DAYS_OF_WEEK_IT = ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'];
@@ -33,6 +34,7 @@ let useFirestore = false;
 
 // --- INIZIALIZZAZIONE ---
 document.addEventListener('DOMContentLoaded', () => {
+  initAuth();
   initFirebase();
   initUI();
   if (!useFirestore) {
@@ -40,6 +42,48 @@ document.addEventListener('DOMContentLoaded', () => {
     render();
   }
 });
+
+function initAuth() {
+  const form = document.getElementById('login-form');
+  const errorMsg = document.getElementById('login-error');
+  
+  const savedSession = sessionStorage.getItem('visitplanner_user');
+  if (savedSession) {
+    applyUserRole(savedSession);
+  }
+  
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const user = document.getElementById('login-username').value.trim().toLowerCase();
+    const pass = document.getElementById('login-password').value;
+    
+    if (user === 'admin' && pass === '123') {
+      applyUserRole('admin');
+    } else if (user === 'stefano' && pass === '123') {
+      applyUserRole('visitor');
+    } else {
+      errorMsg.classList.remove('hidden');
+    }
+  });
+  
+  document.getElementById('logout-btn').addEventListener('click', () => {
+    sessionStorage.removeItem('visitplanner_user');
+    location.reload();
+  });
+}
+
+function applyUserRole(role) {
+  currentUser = role;
+  sessionStorage.setItem('visitplanner_user', role);
+  document.getElementById('login-overlay').classList.add('hidden-login');
+  document.getElementById('current-user-badge').textContent = role === 'admin' ? 'Admin' : 'Stefano';
+  
+  if (role === 'visitor') {
+    document.body.classList.add('visitor-role');
+  } else {
+    document.body.classList.remove('visitor-role');
+  }
+}
 
 function initFirebase() {
   try {
@@ -196,6 +240,7 @@ function initUI() {
 
   // Aggiungi Visita (bottone nel pannello dettagli)
   document.getElementById('add-visit-btn').addEventListener('click', () => {
+    if (currentUser === 'visitor') return;
     openProgramModalForDate(formatDateISO(selectedDate));
   });
 
@@ -558,6 +603,7 @@ function renderMonthView() {
 
     // Double click per creare velocemente un evento
     cell.addEventListener('dblclick', () => {
+      if (currentUser === 'visitor') return;
       selectedDate = new Date(dateStr + 'T12:00:00');
       openProgramModalForDate(dateStr);
     });
@@ -699,6 +745,7 @@ function renderWeekView() {
     });
     
     dayCol.addEventListener('dblclick', (e) => {
+      if (currentUser === 'visitor') return;
       // Calcola l'ora approssimativa del click per precompilarla
       const rect = dayCol.getBoundingClientRect();
       const clickY = e.clientY - rect.top;
@@ -831,6 +878,7 @@ function closeAllModals() {
 
 // MODALE SCELTA (OUTCOME VS SERIE COMPLETA)
 function openChoiceModal(visit) {
+  if (currentUser === 'visitor') return;
   document.getElementById('choice-client-name').textContent = visit.clientName;
   
   const formattedDate = formatDateItalian(visit.date);
