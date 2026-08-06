@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Calendario Visite Commerciali</title>
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <span class="brand-icon">💼</span>
+        <h2>VisitPlanner</h2>
+      </div>
+      <nav class="sidebar-nav">
+        <button id="nav-calendar-btn" class="nav-btn active">
+          <span class="nav-icon">📅</span> Calendario
+        </button>
+        <button id="nav-clients-btn" class="nav-btn">
+          <span class="nav-icon">👥</span> Gestione Clienti
+        </button>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="backup-section">
+          <h3>Backup Dati</h3>
+          <div class="backup-buttons">
+            <button id="export-backup-btn" class="btn btn-secondary btn-sm" title="Esporta tutti i dati in un file JSON">
+              📥 Esporta
+            </button>
+            <button id="import-backup-trigger-btn" class="btn btn-secondary btn-sm" title="Importa dati da file JSON">
+              📤 Importa
+            </button>
+            <input type="file" id="import-backup-file" accept=".json" style="display: none;">
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- Section: Calendar View -->
+      <section id="section-calendar" class="content-section">
+        <header class="section-header">
+          <div class="header-left">
+            <h1 id="calendar-title">Agosto 2026</h1>
+            <div class="calendar-nav-controls">
+              <button id="cal-prev-btn" class="btn btn-icon" title="Precedente">◀</button>
+              <button id="cal-today-btn" class="btn btn-secondary">Oggi</button>
+              <button id="cal-next-btn" class="btn btn-icon" title="Successivo">▶</button>
+            </div>
+          </div>
+          <div class="header-right">
+            <div class="print-menu-container">
+              <button id="print-btn" class="btn btn-secondary">
+                🖨️ Stampa...
+              </button>
+              <div id="print-dropdown" class="print-dropdown hidden">
+                <button id="print-day-btn">Stampa Giorno Selezionato</button>
+                <button id="print-week-btn">Stampa Settimana Corrente</button>
+                <button id="print-month-btn">Stampa Mese Corrente</button>
+              </div>
+            </div>
+            <div class="view-tabs">
+              <button id="view-month-btn" class="tab-btn active">Mese</button>
+              <button id="view-week-btn" class="tab-btn">Settimana</button>
+            </div>
+          </div>
+        </header>
+
+        <div class="calendar-workspace">
+          <!-- Calendar Main Grid Container -->
+          <div id="calendar-grid-container" class="calendar-grid-wrapper">
+            <!-- Grid is dynamically rendered by JS -->
+          </div>
+
+          <!-- Side Panel for Selected Day Details -->
+          <div class="day-details-panel">
+            <div class="panel-header">
+              <h3 id="selected-day-label">Giovedì, 6 Agosto 2026</h3>
+              <button id="add-visit-btn" class="btn btn-primary btn-sm">
+                <span>+</span> Nuova Visita
+              </button>
+            </div>
+            <div id="day-visits-list" class="visits-list">
+              <!-- Visits for selected day will be rendered here -->
+              <div class="empty-state">Nessuna visita programmata per oggi.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section: Client Management -->
+      <section id="section-clients" class="content-section hidden">
+        <header class="section-header">
+          <h1>Anagrafica Clienti</h1>
+        </header>
+        <div class="clients-workspace">
+          <!-- Left: Add/Edit Client Form -->
+          <div class="client-form-container">
+            <h3 id="client-form-title">Aggiungi Nuovo Cliente</h3>
+            <form id="client-crud-form">
+              <input type="hidden" id="edit-client-id">
+              <div class="form-group">
+                <label for="client-name-input">Nome / Ragione Sociale *</label>
+                <input type="text" id="client-name-input" placeholder="Es. Gherardini S.r.l." required autocomplete="off">
+              </div>
+              <div class="form-actions">
+                <button type="submit" id="save-client-btn" class="btn btn-primary">Aggiungi</button>
+                <button type="button" id="cancel-client-edit-btn" class="btn btn-secondary hidden">Annulla</button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Right: Client List -->
+          <div class="client-list-container">
+            <h3>Clienti Registrati</h3>
+            <div class="search-bar">
+              <input type="text" id="client-search" placeholder="Cerca cliente per nome...">
+            </div>
+            <div id="clients-grid" class="clients-grid">
+              <!-- Populated by JS -->
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- MODAL: Choice (Outcome vs Edit Program) -->
+  <div id="choice-modal" class="modal">
+    <div class="modal-content modal-sm">
+      <div class="modal-header">
+        <h3>Gestione Visita</h3>
+        <button class="close-modal-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="visit-info-card">
+          <h4 id="choice-client-name">Nome Cliente</h4>
+          <p id="choice-visit-datetime">Giorno, Ora inizio - Ora fine</p>
+          <div id="choice-visit-status-badge" class="badge">Pianificata</div>
+        </div>
+        <p class="choice-intro">Cosa desideri fare con questa visita?</p>
+        <div class="choice-actions">
+          <button id="choice-log-btn" class="btn btn-primary btn-block">
+            📝 Registra Esito Visita <small>(Solo per questo giorno)</small>
+          </button>
+          <button id="choice-edit-series-btn" class="btn btn-secondary btn-block">
+            ⚙️ Modifica Programmazione <small>(Modifica la serie completa)</small>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Program / Edit Recurring Visit -->
+  <div id="program-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="program-modal-title">Programma Visita Commerciale</h3>
+        <button class="close-modal-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="program-visit-form">
+          <input type="hidden" id="edit-event-id">
+          
+          <div class="form-group">
+            <label for="event-client-select">Cliente *</label>
+            <select id="event-client-select" required>
+              <option value="" disabled selected>Seleziona un cliente...</option>
+              <!-- Populated by JS -->
+            </select>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="event-start-date">Data Primo Passaggio *</label>
+              <input type="date" id="event-start-date" required>
+            </div>
+            <div class="form-group">
+              <label for="event-day-display">Giorno della Settimana</label>
+              <input type="text" id="event-day-display" readonly class="input-readonly">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label for="event-start-time">Ora Inizio *</label>
+              <select id="event-start-time" required>
+                <!-- Populated by JS (every 30 mins) -->
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="event-end-time">Ora Fine *</label>
+              <select id="event-end-time" required>
+                <!-- Populated by JS (every 30 mins) -->
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group border-top pt-3">
+            <label for="event-recurrence">Ripetizione (Ricorrenza)</label>
+            <select id="event-recurrence">
+              <option value="0">Singola (Nessuna ripetizione)</option>
+              <option value="1">Ogni settimana</option>
+              <option value="2">Ogni 2 settimane</option>
+              <option value="3">Ogni 3 settimane</option>
+              <option value="4">Ogni 4 settimane</option>
+            </select>
+            <p class="form-tip">La ricorrenza avverrà sempre nello stesso giorno della settimana e alla stessa ora.</p>
+          </div>
+
+          <div id="recurrence-end-container" class="form-group hidden">
+            <label for="event-end-date">Ripeti fino al *</label>
+            <input type="date" id="event-end-date">
+          </div>
+
+          <div class="modal-footer-actions">
+            <button type="button" id="delete-event-btn" class="btn btn-danger hidden">Elimina Programmazione</button>
+            <div class="right-actions">
+              <button type="button" class="btn btn-secondary cancel-btn">Annulla</button>
+              <button type="submit" class="btn btn-primary">Salva</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Log Outcome (Single Instance) -->
+  <div id="log-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Registra Esito Visita</h3>
+        <button class="close-modal-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="log-outcome-form">
+          <input type="hidden" id="log-event-id">
+          <input type="hidden" id="log-date">
+
+          <div class="visit-summary">
+            <div><strong>Cliente:</strong> <span id="log-client-name-label">-</span></div>
+            <div><strong>Data e Ora:</strong> <span id="log-datetime-label">-</span></div>
+          </div>
+
+          <div class="form-group">
+            <label>Stato Visita *</label>
+            <div class="status-radio-group">
+              <label class="status-radio-label status-planned">
+                <input type="radio" name="visit-status" value="pianificata" checked>
+                <span>⏳ Pianificata</span>
+              </label>
+              <label class="status-radio-label status-completed">
+                <input type="radio" name="visit-status" value="effettuata">
+                <span>✅ Effettuata</span>
+              </label>
+              <label class="status-radio-label status-missed">
+                <input type="radio" name="visit-status" value="mancata">
+                <span>❌ Mancata</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="log-notes">Note di Visita / Report commerciale</label>
+            <textarea id="log-notes" rows="4" placeholder="Inserisci note sull'esito della visita, richieste del cliente, accordi commerciali presi..."></textarea>
+          </div>
+
+          <div class="modal-footer-actions">
+            <button type="button" class="btn btn-secondary cancel-btn">Annulla</button>
+            <button type="submit" class="btn btn-primary">Registra Esito</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Client History -->
+  <div id="history-modal" class="modal">
+    <div class="modal-content modal-lg">
+      <div class="modal-header">
+        <h3 id="history-modal-title">Storico Visite: Nome Cliente</h3>
+        <button class="close-modal-btn">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="client-history-stats">
+          <div class="stat-card">
+            <span class="stat-num" id="stat-total-visits">0</span>
+            <span class="stat-label">Visite Totali</span>
+          </div>
+          <div class="stat-card success">
+            <span class="stat-num" id="stat-completed-visits">0</span>
+            <span class="stat-label">Effettuate</span>
+          </div>
+          <div class="stat-card fail">
+            <span class="stat-num" id="stat-missed-visits">0</span>
+            <span class="stat-label">Mancate</span>
+          </div>
+        </div>
+        <div class="history-list-container">
+          <h4>Cronologia Passaggi</h4>
+          <div id="history-timeline" class="history-timeline">
+            <!-- Timeline elements populated by JS -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

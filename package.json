@@ -1,0 +1,11 @@
+{
+  "name": "visitplanner",
+  "version": "1.0.0",
+  "description": "Calendario di programmazione visite commerciali clienti",
+  "main": "index.html",
+  "scripts": {
+    "dev": "npx -y serve ."
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}
